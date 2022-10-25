@@ -8,6 +8,6 @@
 
 		cd dsim-app
 		docker compose up -d
-OR
+### OR
 		cd dsim-app
 		docker-compose up -d
