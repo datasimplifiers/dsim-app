@@ -54,8 +54,8 @@ echo_step "1" "Complete" "Applying DB migrations"
 echo_step "2" "Starting" "Setting up admin user ( admin / $ADMIN_PASSWORD )"
 superset fab create-admin \
               --username admin \
-              --firstname Super Admin \
-              --lastname Data Simplifiers \
+              --firstname SuperAdmin \
+              --lastname DataSimplifiers \
               --email admin@datasimplifiers.com \
               --password $ADMIN_PASSWORD
 echo_step "2" "Complete" "Setting up admin user"

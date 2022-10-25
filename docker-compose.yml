@@ -34,7 +34,7 @@ services:
 
   db:
     env_file: docker/.env
-    image: postgres:10
+    image: postgis/postgis:15-master
     container_name: dsim_db
     restart: unless-stopped
     volumes:
