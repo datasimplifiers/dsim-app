@@ -1,0 +1,96 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+x-dsim-image: &dsim-image datasimplifiers/dsim-app:1.0.0
+x-dsim-depends-on: &dsim-depends-on
+  - db
+  - redis
+x-dsim-volumes: &dsim-volumes
+  # /app/pythonpath_docker will be appended to the PYTHONPATH in the final container
+  - ./docker:/app/docker
+  - dsim_home:/app/superset_home
+
+version: "3.7"
+services:
+  redis:
+    image: redis:latest
+    container_name: dsim_cache
+    restart: unless-stopped
+    volumes:
+      - redis:/data
+
+  db:
+    env_file: docker/.env
+    image: postgres:10
+    container_name: dsim_db
+    restart: unless-stopped
+    volumes:
+      - db_home:/var/lib/postgresql/data
+
+  dsim:
+    env_file: docker/.env
+    image: *dsim-image
+    container_name: dsim_app
+    command: ["/app/docker/docker-bootstrap.sh", "app-gunicorn"]
+    user: "root"
+    restart: unless-stopped
+    ports:
+      - 3000:8088
+    depends_on: *dsim-depends-on
+    volumes: *dsim-volumes
+
+  dsim-init:
+    image: *dsim-image
+    container_name: dsim_init
+    command: ["/app/docker/docker-init.sh"]
+    env_file: docker/.env
+    depends_on: *dsim-depends-on
+    user: "root"
+    volumes: *dsim-volumes
+    healthcheck:
+      disable: true
+
+  dsim-worker:
+    image: *dsim-image
+    container_name: dsim_worker
+    command: ["/app/docker/docker-bootstrap.sh", "worker"]
+    env_file: docker/.env
+    restart: unless-stopped
+    depends_on: *dsim-depends-on
+    user: "root"
+    volumes: *dsim-volumes
+    healthcheck:
+      test: ["CMD-SHELL", "celery inspect ping -A dsim.tasks.celery_app:app -d celery@$$HOSTNAME"]
+
+  dsim-worker-beat:
+    image: *dsim-image
+    container_name: dsim_worker_beat
+    command: ["/app/docker/docker-bootstrap.sh", "beat"]
+    env_file: docker/.env
+    restart: unless-stopped
+    depends_on: *dsim-depends-on
+    user: "root"
+    volumes: *dsim-volumes
+    healthcheck:
+      disable: true
+
+volumes:
+  dsim_home:
+    external: false
+  db_home:
+    external: false
+  redis:
+    external: false
